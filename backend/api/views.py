@@ -1,3 +1,4 @@
+import random
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
@@ -44,7 +45,6 @@ def list_products(request):
     return Response(serializer.data)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def product_detail(request, pk):
     try:
         product = Product.objects.get(pk=pk)
@@ -56,14 +56,20 @@ def product_detail(request, pk):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_to_cart(request):
-    customer = Customer.objects.get(user=request.user)
-    data = request.data
-    product = Product.objects.get(pk=data['product_id'])
-    cart_item, created = CartItem.objects.get_or_create(customer=customer, product=product)
-    cart_item.quantity = data['quantity']
-    cart_item.save()
-    serializer = CartItemSerializer(cart_item)
-    return Response(serializer.data, status=status.HTTP_201_CREATED)
+    try:
+        customer, _ = Customer.objects.get_or_create(user=request.user)
+        data = request.data
+        product = Product.objects.get(pk=data['product_id'])
+        cart_item, created = CartItem.objects.get_or_create(customer=customer, product=product)
+        if not created:
+            cart_item.quantity += data['quantity']
+        else:
+            cart_item.quantity = data['quantity']
+        cart_item.save()
+        serializer = CartItemSerializer(cart_item)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    except Exception as e:
+        return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -115,3 +121,37 @@ def get_cart(request):
     serializer = CartItemSerializer(cart_items, many=True)
     return Response(serializer.data)
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def process_payment(request):
+    customer = Customer.objects.get(user=request.user)
+    cart_items = CartItem.objects.filter(customer=customer)
+    if not cart_items:
+        return Response({'detail': 'Cart is empty'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Dummy payment algorithm: deny every 3rd request
+    if random.randint(1, 3) == 3:
+        return Response({'detail': 'Credit Card Authorization Failed.'}, status=status.HTTP_402_PAYMENT_REQUIRED)
+
+    total_price = sum(item.product.price * item.quantity for item in cart_items)
+    data = request.data
+    order = Order.objects.create(
+        customer=customer,
+        total_price=total_price,
+        shipping_address=data['shipping_address'],
+        billing_address=data['billing_address'],
+        status='Approved'
+    )
+    
+    for item in cart_items:
+        OrderItem.objects.create(
+            order=order,
+            product=item.product,
+            quantity=item.quantity
+        )
+        item.product.inventory_quantity -= item.quantity
+        item.product.save()
+        item.delete()
+    
+    serializer = OrderSerializer(order)
+    return Response(serializer.data, status=status.HTTP_201_CREATED)
