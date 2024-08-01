@@ -60,7 +60,9 @@ def add_to_cart(request):
         customer, _ = Customer.objects.get_or_create(user=request.user)
         data = request.data
         product = Product.objects.get(pk=data['product_id'])
-        cart_item, created = CartItem.objects.get_or_create(customer=customer, product=product)
+        cart_item, created = CartItem.objects.get_or_create(customer=customer, product=product, quantity=0)
+        
+        # Update the quantity
         if not created:
             cart_item.quantity += data['quantity']
         else:
@@ -68,6 +70,8 @@ def add_to_cart(request):
         cart_item.save()
         serializer = CartItemSerializer(cart_item)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+    except Product.DoesNotExist:
+        return Response({'detail': 'Product not found.'}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
