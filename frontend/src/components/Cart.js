@@ -7,9 +7,14 @@ function Cart() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        axiosInstance.get("cart/").then((res) => {
-            setCartItems(res.data);
-        });
+        axiosInstance
+            .get("cart/")
+            .then((res) => {
+                setCartItems(res.data);
+            })
+            .catch((err) => {
+                console.error(err);
+            });
     }, []);
 
     const checkout = () => {
@@ -23,6 +28,7 @@ function Cart() {
                 <ul>
                     {cartItems.map((item) => (
                         <li key={item.id}>
+                            <img src={`http://localhost:8000${item.product.image}`} alt={item.product.name} style={{ width: "100px", height: "100px" }} />
                             {item.quantity} x {item.product.name} - ${item.product.price}
                         </li>
                     ))}

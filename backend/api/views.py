@@ -120,8 +120,8 @@ def get_cart(request):
     customer = Customer.objects.get(user=request.user)
     cart_items = CartItem.objects.filter(customer=customer)
     if not cart_items:
-        return Response({'detail': 'empty'}, status=status.HTTP_204_NO_CONTENT)
-    
+        return Response({'detail': 'Cart is empty'}, status=status.HTTP_204_NO_CONTENT)
+
     serializer = CartItemSerializer(cart_items, many=True)
     return Response(serializer.data)
 
