@@ -27,7 +27,13 @@ function ProductDetail() {
             })
             .catch((err) => {
                 console.error(err);
-                alert("Error adding to cart. Make sure you are logged in.");
+                if (err.response && err.response.status === 401) {
+                    alert("You must be logged in to add items to the cart.");
+                } else if (err.response && err.response.data.detail) {
+                    alert(`Error: ${err.response.data.detail}`);
+                } else {
+                    alert("An error occurred. Please try again.");
+                }
             });
     };
 

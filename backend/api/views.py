@@ -56,12 +56,16 @@ def add_to_cart(request):
         customer, _ = Customer.objects.get_or_create(user=request.user)
         data = request.data
         product = Product.objects.get(pk=data['product_id'])
-        cart_item, created = CartItem.objects.get_or_create(customer=customer, product=product)
+        quantity = data.get('quantity', 1)
+
+        try:
+            cart_item = CartItem.objects.get(customer=customer, product=product)
+            cart_item.quantity += quantity
+        except CartItem.DoesNotExist:
+            cart_item = CartItem(customer=customer, product=product, quantity=quantity)
         
-        # Update the quantity
-        cart_item.quantity += data['quantity']
         cart_item.save()
-        
+
         serializer = CartItemSerializer(cart_item)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     except Product.DoesNotExist:
