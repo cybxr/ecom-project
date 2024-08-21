@@ -7,6 +7,10 @@ function Cart() {
     const navigate = useNavigate();
 
     useEffect(() => {
+        fetchCartItems();
+    }, []);
+
+    const fetchCartItems = () => {
         axiosInstance
             .get("cart/")
             .then((res) => {
@@ -15,7 +19,19 @@ function Cart() {
             .catch((err) => {
                 console.error(err);
             });
-    }, []);
+    };
+
+    const handleRemove = (itemId) => {
+        axiosInstance.delete(`cart/remove/${itemId}/`).then(() => {
+            fetchCartItems();
+        });
+    };
+
+    const handleQuantityChange = (itemId, quantity) => {
+        axiosInstance.put(`cart/update/${itemId}/`, { quantity }).then(() => {
+            fetchCartItems();
+        });
+    };
 
     const checkout = () => {
         navigate("/checkout");
@@ -30,6 +46,8 @@ function Cart() {
                         <li key={item.id}>
                             <img src={`http://localhost:8000${item.product.image}`} alt={item.product.name} style={{ width: "100px", height: "100px" }} />
                             {item.quantity} x {item.product.name} - ${item.product.price}
+                            <input type="number" value={item.quantity} onChange={(e) => handleQuantityChange(item.id, e.target.value)} min="1" max={item.product.inventory_quantity} />
+                            <button onClick={() => handleRemove(item.id)}>Remove</button>
                         </li>
                     ))}
                 </ul>

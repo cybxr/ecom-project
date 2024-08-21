@@ -12,7 +12,7 @@ class CustomerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Customer
-        fields = ['user']
+        fields = ['user', 'billing_address', 'shipping_address', 'credit_card_info']
 
 class ProductSerializer(serializers.ModelSerializer):
     class Meta:

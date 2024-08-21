@@ -4,6 +4,9 @@ from django.contrib.auth.models import User
 # Wrapper class to distinguish customers from users with no orders
 class Customer(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
+    billing_address = models.TextField(blank=True, null=True)
+    shipping_address = models.TextField(blank=True, null=True)
+    credit_card_info = models.CharField(max_length=255, blank=True, null=True)
     
     def __str__(self):
         return self.user.username

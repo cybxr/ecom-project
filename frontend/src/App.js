@@ -7,6 +7,7 @@ import Checkout from "./components/Checkout";
 import Login from "./components/Login";
 import Register from "./components/Register";
 import OrderSummary from "./components/OrderSummary";
+import Account from "./components/Account";
 
 function App() {
     return (
@@ -19,6 +20,7 @@ function App() {
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/order-summary" element={<OrderSummary />} />
+                <Route path="/account" element={<Account />} />
             </Routes>
         </Router>
     );

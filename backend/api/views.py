@@ -1,4 +1,5 @@
 import random
+from django.http import JsonResponse
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
@@ -10,6 +11,8 @@ from .serializers import (
     UserSerializer, CustomerSerializer, ProductSerializer, 
     OrderSerializer, OrderItemSerializer, CartItemSerializer
 )
+from rest_framework.permissions import AllowAny
+from django.db.models import Q
 
 @api_view(['POST'])
 def register(request):
@@ -38,13 +41,6 @@ def login(request):
         return Response({'detail': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
 @api_view(['GET'])
-# @permission_classes([IsAuthenticated])
-def list_products(request):
-    products = Product.objects.all()
-    serializer = ProductSerializer(products, many=True)
-    return Response(serializer.data)
-
-@api_view(['GET'])
 def product_detail(request, pk):
     try:
         product = Product.objects.get(pk=pk)
@@ -60,14 +56,12 @@ def add_to_cart(request):
         customer, _ = Customer.objects.get_or_create(user=request.user)
         data = request.data
         product = Product.objects.get(pk=data['product_id'])
-        cart_item, created = CartItem.objects.get_or_create(customer=customer, product=product, quantity=0)
+        cart_item, created = CartItem.objects.get_or_create(customer=customer, product=product)
         
         # Update the quantity
-        if not created:
-            cart_item.quantity += data['quantity']
-        else:
-            cart_item.quantity = data['quantity']
+        cart_item.quantity += data['quantity']
         cart_item.save()
+        
         serializer = CartItemSerializer(cart_item)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     except Product.DoesNotExist:
@@ -83,13 +77,17 @@ def checkout(request):
     if not cart_items:
         return Response({'detail': 'Cart is empty'}, status=status.HTTP_400_BAD_REQUEST)
     
+    for item in cart_items:
+        if item.quantity > item.product.inventory_quantity:
+            return Response({'detail': f'Not enough stock for {item.product.name}'}, status=status.HTTP_400_BAD_REQUEST)
+    
     total_price = sum(item.product.price * item.quantity for item in cart_items)
     data = request.data
     order = Order.objects.create(
         customer=customer,
         total_price=total_price,
-        shipping_address=data['shipping_address'],
-        billing_address=data['billing_address'],
+        shipping_address=data.get('shipping_address', customer.shipping_address),
+        billing_address=data.get('billing_address', customer.billing_address),
         status='Pending'
     )
     
@@ -105,6 +103,30 @@ def checkout(request):
     
     serializer = OrderSerializer(order)
     return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+@api_view(['POST'])
+def register_or_login_and_checkout(request):
+    if not request.user.is_authenticated:
+        data = request.data
+        user = User.objects.create_user(
+            username=data['username'],
+            password=data['password'],
+            email=data['email']
+        )
+        customer = Customer.objects.create(
+            user=user,
+            billing_address=data.get('billing_address'),
+            shipping_address=data.get('shipping_address'),
+            credit_card_info=data.get('credit_card_info')
+        )
+        refresh = RefreshToken.for_user(user)
+        request.user = user
+        return Response({
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+        }, status=status.HTTP_201_CREATED)
+    else:
+        return checkout(request)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -159,3 +181,58 @@ def process_payment(request):
     
     serializer = OrderSerializer(order)
     return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+@api_view(['GET', 'PUT'])
+@permission_classes([IsAuthenticated])
+def account(request):
+    customer = Customer.objects.get(user=request.user)
+    if request.method == 'GET':
+        serializer = CustomerSerializer(customer)
+        return Response(serializer.data)
+    elif request.method == 'PUT':
+        data = request.data
+        serializer = CustomerSerializer(customer, data=data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+def filter_products(request):
+    category = request.query_params.get('category')
+    search = request.query_params.get('search')
+
+    products = Product.objects.all()
+
+    if category:
+        products = products.filter(category=category)
+    if search:
+        products = products.filter(
+            Q(name__icontains=search) |
+            Q(description__icontains=search) |
+            Q(category__icontains=search)
+        )
+
+    serializer = ProductSerializer(products, many=True)
+    return Response(serializer.data)
+
+@api_view(['GET'])
+def list_products(request):
+    products = Product.objects.all()
+
+    sort_by = request.query_params.get('sort_by')
+    if sort_by == 'price_asc':
+        products = products.order_by('price')
+    elif sort_by == 'price_desc':
+        products = products.order_by('-price')
+    elif sort_by == 'name_asc':
+        products = products.order_by('name')
+    elif sort_by == 'name_desc':
+        products = products.order_by('-name')
+
+    serializer = ProductSerializer(products, many=True)
+    return Response(serializer.data)
+
+def list_categories(request):
+    categories = Product.objects.values_list('category', flat=True).distinct()
+    return JsonResponse(list(categories), safe=False)
