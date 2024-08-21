@@ -201,6 +201,7 @@ def account(request):
 def filter_products(request):
     category = request.query_params.get('category')
     search = request.query_params.get('search')
+    sort_by = request.query_params.get('sort_by')
 
     products = Product.objects.all()
 
@@ -213,23 +214,22 @@ def filter_products(request):
             Q(category__icontains=search)
         )
 
+    if sort_by:
+        if sort_by == 'price_asc':
+            products = products.order_by('price')
+        elif sort_by == 'price_desc':
+            products = products.order_by('-price')
+        elif sort_by == 'name_asc':
+            products = products.order_by('name')
+        elif sort_by == 'name_desc':
+            products = products.order_by('-name')
+
     serializer = ProductSerializer(products, many=True)
     return Response(serializer.data)
 
 @api_view(['GET'])
 def list_products(request):
     products = Product.objects.all()
-
-    sort_by = request.query_params.get('sort_by')
-    if sort_by == 'price_asc':
-        products = products.order_by('price')
-    elif sort_by == 'price_desc':
-        products = products.order_by('-price')
-    elif sort_by == 'name_asc':
-        products = products.order_by('name')
-    elif sort_by == 'name_desc':
-        products = products.order_by('-name')
-
     serializer = ProductSerializer(products, many=True)
     return Response(serializer.data)
 

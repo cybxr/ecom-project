@@ -23,21 +23,11 @@ function ProductList() {
         }
     }, []);
 
-    const fetchFilteredProducts = () => {
+    const fetchProducts = () => {
         let query = "products/filter/";
         let params = [];
         if (category) params.push(`category=${category}`);
         if (search) params.push(`search=${search}`);
-        if (params.length > 0) query += "?" + params.join("&");
-
-        axiosInstance.get(query).then((res) => {
-            setProducts(res.data);
-        });
-    };
-
-    const fetchSortedProducts = () => {
-        let query = "products/";
-        let params = [];
         if (sort) params.push(`sort_by=${sort}`);
         if (params.length > 0) query += "?" + params.join("&");
 
@@ -47,18 +37,14 @@ function ProductList() {
     };
 
     useEffect(() => {
-        fetchFilteredProducts();
-    }, [category]);
-
-    useEffect(() => {
-        fetchSortedProducts();
-    }, [sort]);
+        fetchProducts(); // Fetch products whenever category or sort changes
+    }, [category, sort]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
         setCategory(""); // Reset category to default
         setSort(""); // Reset sort to default
-        fetchFilteredProducts();
+        fetchProducts();
     };
 
     return (
