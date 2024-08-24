@@ -49,3 +49,20 @@ class CartItem(models.Model):
 
     def __str__(self):
         return f'{self.quantity} of {self.product.name} in {self.customer.user.username}\'s cart'
+    
+class Review(models.Model):
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, related_name='reviews', on_delete=models.CASCADE)
+    rating = models.PositiveIntegerField(default=1)
+    review = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'Review for {self.product.name} by {self.customer.user.username}'
+    
+    class Meta:
+        unique_together = ('customer', 'product')
+
+    @property
+    def average_rating(self):
+        return self.product.reviews.aggregate(avg_rating=models.Avg('rating'))['avg_rating']

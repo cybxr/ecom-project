@@ -6,9 +6,9 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.models import User
-from .models import Customer, Product, Order, OrderItem, CartItem
+from .models import Customer, Product, Order, OrderItem, CartItem, Review
 from .serializers import (
-    UserSerializer, CustomerSerializer, ProductSerializer, 
+    ReviewSerializer, UserSerializer, CustomerSerializer, ProductSerializer, 
     OrderSerializer, OrderItemSerializer, CartItemSerializer
 )
 from rest_framework.permissions import AllowAny
@@ -240,3 +240,36 @@ def list_products(request):
 def list_categories(request):
     categories = Product.objects.values_list('category', flat=True).distinct()
     return JsonResponse(list(categories), safe=False)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_review(request):
+    customer = Customer.objects.get(user=request.user)
+    data = request.data
+    try:
+        product = Product.objects.get(pk=data['product_id'])
+    except Product.DoesNotExist:
+        return Response({'detail': 'Product not found'}, status=status.HTTP_404_NOT_FOUND)
+    
+    review, created = Review.objects.update_or_create(
+        customer=customer,
+        product=product,
+        defaults={
+            'rating': data['rating'],
+            'review': data.get('review', '')
+        }
+    )
+
+    serializer = ReviewSerializer(review)
+    return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+@api_view(['GET'])
+def product_reviews(request, pk):
+    try:
+        product = Product.objects.get(pk=pk)
+    except Product.DoesNotExist:
+        return Response({'detail': 'Product not found'}, status=status.HTTP_404_NOT_FOUND)
+    
+    reviews = product.reviews.all()
+    serializer = ReviewSerializer(reviews, many=True)
+    return Response(serializer.data)
