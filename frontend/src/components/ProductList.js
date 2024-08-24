@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axiosInstance from "../axiosInstance";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 function ProductList() {
     const [products, setProducts] = useState([]);
@@ -8,19 +8,11 @@ function ProductList() {
     const [search, setSearch] = useState("");
     const [sort, setSort] = useState("");
     const [categories, setCategories] = useState([]);
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-    const navigate = useNavigate();
 
     useEffect(() => {
         axiosInstance.get("categories/").then((res) => {
             setCategories(res.data);
         });
-
-        const token = localStorage.getItem("access_token");
-        if (token) {
-            setIsLoggedIn(true);
-        }
     }, []);
 
     const fetchProducts = () => {
@@ -37,29 +29,16 @@ function ProductList() {
     };
 
     useEffect(() => {
-        fetchProducts(); // Fetch products whenever category or sort changes
+        fetchProducts();
     }, [category, sort]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        setCategory(""); // Reset category to default
-        setSort(""); // Reset sort to default
         fetchProducts();
     };
 
     return (
         <div className="container mt-4">
-            <div className="d-flex justify-content-end mb-4">
-                {isLoggedIn ? (
-                    <button className="btn btn-primary" onClick={() => navigate("/account")}>View Profile</button>
-                ) : (
-                    <>
-                        <button className="btn btn-primary me-2" onClick={() => navigate("/login")}>Login</button>
-                        <button className="btn btn-secondary" onClick={() => navigate("/register")}>Signup</button>
-                    </>
-                )}
-            </div>
-
             <h1 className="mb-4">Products</h1>
             <form onSubmit={handleSubmit} className="mb-4">
                 <div className="row g-3">

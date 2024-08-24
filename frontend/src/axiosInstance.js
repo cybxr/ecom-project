@@ -1,5 +1,4 @@
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
 
 const axiosInstance = axios.create({
     baseURL: "http://localhost:8000/api/",
@@ -23,7 +22,9 @@ axiosInstance.interceptors.response.use(
     async (error) => {
         const originalRequest = error.config;
 
-        if (error.response.status === 401 && originalRequest.url !== "token/refresh/") {
+        // Only attempt to refresh the token if it's not a login request
+        if (error.response.status === 401 && !originalRequest._retry && originalRequest.url !== "login/") {
+            originalRequest._retry = true;
             const refreshToken = localStorage.getItem("refresh_token");
 
             if (refreshToken) {
@@ -34,19 +35,15 @@ axiosInstance.interceptors.response.use(
 
                     originalRequest.headers["Authorization"] = `Bearer ${response.data.access}`;
                     return axiosInstance(originalRequest);
-                } catch (err) {
+                } catch (refreshError) {
+                    console.error("Error refreshing token:", refreshError);
                     localStorage.removeItem("access_token");
                     localStorage.removeItem("refresh_token");
-
-                    const navigate = useNavigate();
-                    navigate("/login");
+                    return Promise.reject(refreshError);
                 }
             } else {
-                localStorage.removeItem("access_token");
-                localStorage.removeItem("refresh_token");
-
-                const navigate = useNavigate();
-                navigate("/");
+                console.error("No refresh token available");
+                return Promise.reject(error);
             }
         }
 
