@@ -17,4 +17,5 @@ urlpatterns = [
     path('categories/', views.list_categories, name='list_categories'),
     path('reviews/add/', views.add_review, name='add_review'),
     path('products/<int:pk>/reviews/', views.product_reviews, name='product_reviews'),
+    path('logout/', views.logout, name='logout'),
 ]
