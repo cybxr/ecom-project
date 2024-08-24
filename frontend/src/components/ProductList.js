@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axiosInstance from "../axiosInstance";
 import { Link } from "react-router-dom";
+import { Star, StarHalf, StarFill } from 'react-bootstrap-icons';
 
 function ProductList() {
     const [products, setProducts] = useState([]);
@@ -37,9 +38,39 @@ function ProductList() {
         fetchProducts();
     };
 
+    const getStockStatus = (quantity) => {
+        if (quantity > 10) {
+            return <span className="text-success">In Stock</span>;
+        } else if (quantity > 0) {
+            return <span className="text-danger">Low Stock: {quantity}</span>;
+        } else {
+            return <span className="text-muted">Out of Stock</span>;
+        }
+    };
+
+    const renderStars = (rating) => {
+        const stars = [];
+        const fullStars = Math.floor(rating);
+        const hasHalfStar = rating % 1 >= 0.5;
+
+        for (let i = 0; i < fullStars; i++) {
+            stars.push(<StarFill key={i} className="text-warning" />);
+        }
+
+        if (hasHalfStar) {
+            stars.push(<StarHalf key="half" className="text-warning" />);
+        }
+
+        while (stars.length < 5) {
+            stars.push(<Star key={`empty-${stars.length}`} className="text-warning" />);
+        }
+
+        return stars;
+    };
+
     return (
-        <div className="container mt-4">
-            <h1 className="mb-4">Products</h1>
+        <div className="container mt-5">
+            <h2 className="mb-4">Products</h2>
             <form onSubmit={handleSubmit} className="mb-4">
                 <div className="row g-3">
                     <div className="col-md-3">
@@ -70,16 +101,38 @@ function ProductList() {
             <div className="row row-cols-1 row-cols-md-3 g-4">
                 {products.map((product) => (
                     <div key={product.id} className="col">
-                        <div className="card h-100">
-                            <img src={`http://localhost:8000${product.image}`} className="card-img-top" alt={product.name} style={{ objectFit: "contain", height: "200px" }} />
+                        <div className={`card h-100 ${product.inventory_quantity === 0 ? 'text-muted' : ''}`}>
+                            <img 
+                                src={`http://localhost:8000${product.image}`} 
+                                className="card-img-top" 
+                                alt={product.name} 
+                                style={{ 
+                                    objectFit: "contain", 
+                                    height: "200px",
+                                    filter: product.inventory_quantity === 0 ? 'grayscale(100%)' : 'none'
+                                }} 
+                            />
                             <div className="card-body">
-                                <h5 className="card-title">{product.name}</h5>
+                                <h5 className={`card-title ${product.inventory_quantity === 0 ? 'text-decoration-line-through' : ''}`}>
+                                    {product.name}
+                                </h5>
                                 <p className="card-text">${product.price}</p>
-                                <Link to={`/products/${product.id}`} className="btn btn-primary">View Details</Link>
+                                <p className="card-text">{getStockStatus(product.inventory_quantity)}</p>
+                                <div className="mb-2">
+                                    {renderStars(product.average_rating)}
+                                    <span className="ms-2">({product.review_count} reviews)</span>
+                                </div>
+                                <Link 
+                                    to={`/products/${product.id}`} 
+                                    className={`btn btn-primary ${product.inventory_quantity === 0 ? 'disabled' : ''}`}
+                                >
+                                    View Details
+                                </Link>
                             </div>
                         </div>
                     </div>
                 ))}
+            
             </div>
         </div>
     );
