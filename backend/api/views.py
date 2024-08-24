@@ -13,6 +13,7 @@ from .serializers import (
 )
 from rest_framework.permissions import AllowAny
 from django.db.models import Q
+from django.db.models.functions import Lower
 
 @api_view(['POST'])
 def register(request):
@@ -224,9 +225,9 @@ def filter_products(request):
         elif sort_by == 'price_desc':
             products = products.order_by('-price')
         elif sort_by == 'name_asc':
-            products = products.order_by('name')
+            products = products.order_by(Lower('name'))
         elif sort_by == 'name_desc':
-            products = products.order_by('-name')
+            products = products.order_by(Lower('name').desc())
 
     serializer = ProductSerializer(products, many=True)
     return Response(serializer.data)
