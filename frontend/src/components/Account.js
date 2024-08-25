@@ -174,16 +174,11 @@ function Account() {
                                                         <strong>Items:</strong>
                                                     </p>
                                                     <ul>
-                                                        {order.items.map(
-                                                            (item) => (
-                                                                console.log(item),
-                                                                (
-                                                                    <li key={item.id}>
-                                                                        {item.product.name} - Quantity: {item.quantity} - Price: ${formatPrice(item.product.price)}
-                                                                    </li>
-                                                                )
-                                                            )
-                                                        )}
+                                                        {order.items.map((item) => (
+                                                            <li key={item.id}>
+                                                                {item.product.name} - Quantity: {item.quantity} - Price: ${formatPrice(item.product.price)}
+                                                            </li>
+                                                        ))}
                                                     </ul>
                                                 </div>
                                             </td>
