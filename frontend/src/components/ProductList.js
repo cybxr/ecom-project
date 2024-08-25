@@ -40,7 +40,7 @@ function ProductList() {
 
     const getStockStatus = (quantity) => {
         if (quantity > 10) {
-            return <span className="text-success">In Stock</span>;
+            return <span className="text-success">In Stock: {quantity}</span>;
         } else if (quantity > 0) {
             return <span className="text-danger">Low Stock: {quantity}</span>;
         } else {

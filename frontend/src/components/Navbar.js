@@ -53,6 +53,9 @@ function Navbar({ isLoggedIn, setIsLoggedIn }) {
                             {isLoggedIn ? (
                                 <>
                                     <li className="nav-item">
+                                        <Link className="nav-link" to="/cart"><i className="bi bi-cart"></i> Cart</Link>
+                                    </li>
+                                    <li className="nav-item">
                                         <Link className="nav-link" to="/account"><i className="bi bi-person"></i> Profile</Link>
                                     </li>
                                     <li className="nav-item">

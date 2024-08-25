@@ -74,6 +74,51 @@ def add_to_cart(request):
     except Exception as e:
         return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def remove_from_cart(request, item_id):
+    try:
+        customer = Customer.objects.get(user=request.user)
+        cart_item = CartItem.objects.get(pk=item_id, customer=customer)
+        cart_item.delete()
+        return Response({'detail': 'Item removed from cart successfully.'}, status=status.HTTP_204_NO_CONTENT)
+    except Customer.DoesNotExist:
+        return Response({'detail': 'Customer not found.'}, status=status.HTTP_404_NOT_FOUND)
+    except CartItem.DoesNotExist:
+        return Response({'detail': 'Cart item not found.'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def update_cart_item(request, item_id):
+    try:
+        customer = Customer.objects.get(user=request.user)
+        cart_item = CartItem.objects.get(pk=item_id, customer=customer)
+        
+        quantity = request.data.get('quantity')
+        if quantity is None:
+            return Response({'detail': 'Quantity is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            quantity = int(quantity)
+            if quantity <= 0:
+                return Response({'detail': 'Quantity must be a positive integer.'}, status=status.HTTP_400_BAD_REQUEST)
+        except ValueError:
+            return Response({'detail': 'Quantity must be a valid integer.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        cart_item.quantity = quantity
+        cart_item.save()
+        
+        serializer = CartItemSerializer(cart_item)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except Customer.DoesNotExist:
+        return Response({'detail': 'Customer not found.'}, status=status.HTTP_404_NOT_FOUND)
+    except CartItem.DoesNotExist:
+        return Response({'detail': 'Cart item not found.'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def checkout(request):

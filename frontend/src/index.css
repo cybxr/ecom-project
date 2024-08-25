@@ -11,3 +11,10 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+.product-image {
+  max-width: 100%;
+  height: 100%;
+  object-fit: contain;
+  /* This ensures the image scales down to fit inside the 900x900 div without cropping */
+}

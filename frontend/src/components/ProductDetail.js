@@ -9,21 +9,27 @@ function ProductDetail() {
     const [quantity, setQuantity] = useState(1);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [cartQuantity, setCartQuantity] = useState(0);
     const navigate = useNavigate();
 
     useEffect(() => {
         setLoading(true);
-        axiosInstance.get(`products/${id}/`)
-            .then((res) => {
-                if (res.data.inventory_quantity === 0) {
+        Promise.all([
+            axiosInstance.get(`products/${id}/`),
+            axiosInstance.get('cart/')
+        ])
+            .then(([productRes, cartRes]) => {
+                if (productRes.data.inventory_quantity === 0) {
                     navigate("/"); // Redirect to home if out of stock
                 } else {
-                    setProduct(res.data);
+                    setProduct(productRes.data);
+                    const cartItem = cartRes.data.find(item => item.product.id === parseInt(id));
+                    setCartQuantity(cartItem ? cartItem.quantity : 0);
                 }
             })
             .catch((err) => {
                 console.error(err);
-                setError("Failed to load product. Please try again.");
+                setError("Failed to load product or cart data. Please try again.");
             })
             .finally(() => {
                 setLoading(false);
@@ -31,6 +37,12 @@ function ProductDetail() {
     }, [id, navigate]);
 
     const addToCart = () => {
+        const availableQuantity = product.inventory_quantity - cartQuantity;
+        if (quantity > availableQuantity) {
+            setError(`Sorry, you can only add ${availableQuantity} more of this item to your cart.`);
+            return;
+        }
+
         axiosInstance.post("cart/add/", { product_id: id, quantity })
             .then(() => {
                 navigate("/cart");
@@ -71,6 +83,8 @@ function ProductDetail() {
     if (error) return <div className="container mt-5 alert alert-danger">{error}</div>;
     if (!product) return null;
 
+    const availableQuantity = product.inventory_quantity - cartQuantity;
+
     return (
         <div className="container mt-5">
             <div className="row">
@@ -78,7 +92,7 @@ function ProductDetail() {
                     <img 
                         src={`http://localhost:8000${product.image}`} 
                         alt={product.name} 
-                        className="img-fluid"
+                        className="product-image"
                     />
                 </div>
                 <div className="col-md-6">
@@ -86,15 +100,18 @@ function ProductDetail() {
                     <p className="lead mb-4">{product.description}</p>
                     <h2 className="mb-4">${product.price}</h2>
                     <div className="mb-2">
-                                    {renderStars(product.average_rating)}
-                                    <span className="ms-2">({product.review_count} reviews)</span>
-                                </div>
+                        {renderStars(product.average_rating)}
+                        <span className="ms-2">({product.review_count} reviews)</span>
+                    </div>
                     <p className="mb-3">
                         Stock: 
-                        <span className={`ms-2 ${product.inventory_quantity > 10 ? 'text-success' : 'text-danger'}`}>
-                            {product.inventory_quantity > 10 ? 'In Stock' : `Only ${product.inventory_quantity} left`}
+                        <span className={`ms-2 ${availableQuantity > 10 ? 'text-success' : 'text-danger'}`}>
+                            {availableQuantity > 10 ? `${availableQuantity} left` : `Only ${availableQuantity} left`}
                         </span>
                     </p>
+                    {cartQuantity > 0 && (
+                        <p className="mb-3">In your cart: {cartQuantity}</p>
+                    )}
                     <div className="mb-4">
                         <label htmlFor="quantity" className="form-label">Quantity:</label>
                         <input 
@@ -102,12 +119,14 @@ function ProductDetail() {
                             id="quantity"
                             className="form-control" 
                             value={quantity} 
-                            onChange={(e) => setQuantity(Math.max(1, Math.min(Number(e.target.value), product.inventory_quantity)))}
+                            onChange={(e) => setQuantity(Math.max(1, Math.min(Number(e.target.value), availableQuantity)))}
                             min="1" 
-                            max={product.inventory_quantity} 
+                            max={availableQuantity} 
                         />
                     </div>
-                    <button className="btn btn-primary btn-lg" onClick={addToCart}>Add to Cart</button>
+                    <button className="btn btn-primary btn-lg" onClick={addToCart} disabled={availableQuantity === 0}>
+                        {availableQuantity === 0 ? 'Out of Stock' : 'Add to Cart'}
+                    </button>
                 </div>
             </div>
         </div>
