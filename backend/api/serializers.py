@@ -38,6 +38,7 @@ class ReviewSerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     reviews = ReviewSerializer(many=True, read_only=True)
     average_rating = serializers.SerializerMethodField()
+    review_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
@@ -45,6 +46,9 @@ class ProductSerializer(serializers.ModelSerializer):
 
     def get_average_rating(self, obj):
         return obj.reviews.aggregate(avg_rating=Avg('rating'))['avg_rating']
+    
+    def get_review_count(self, obj):
+        return obj.reviews.count()
 
 class CartItemSerializer(serializers.ModelSerializer):
     product = ProductSerializer(read_only=True) 

@@ -66,3 +66,7 @@ class Review(models.Model):
     @property
     def average_rating(self):
         return self.product.reviews.aggregate(avg_rating=models.Avg('rating'))['avg_rating']
+    
+    @property
+    def review_count(self):
+        return self.product.reviews.count()
