@@ -38,7 +38,11 @@ This project consists of a Django backend and a React frontend. Follow the instr
     ```
     python manage.py collectstatic
     ```
-8. Start the Django development server:
+8. If you want to have an admin account run createsuperuser:
+    ```
+    python manage.py createsuperuser
+    ```
+9. Start the Django development server:
     ```
     python manage.py runserver
     ```
