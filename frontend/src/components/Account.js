@@ -4,18 +4,23 @@ import { useNavigate } from "react-router-dom";
 
 function Account() {
     const [accountInfo, setAccountInfo] = useState({ user: {}, billing_address: "", shipping_address: "", credit_card_info: "" });
+    const [orderHistory, setOrderHistory] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const navigate = useNavigate();
 
     useEffect(() => {
-        const fetchAccountInfo = async () => {
+        const fetchData = async () => {
             try {
-                const res = await axiosInstance.get("account/");
-                setAccountInfo(res.data);
+                const [accountRes, orderRes] = await Promise.all([
+                    axiosInstance.get("account/"),
+                    axiosInstance.get("orders/")
+                ]);
+                setAccountInfo(accountRes.data);
+                setOrderHistory(orderRes.data);
                 setLoading(false);
             } catch (err) {
-                console.error("Error fetching account info:", err);
+                console.error("Error fetching data:", err);
                 setError("Failed to load account information. Please try again.");
                 setLoading(false);
                 if (err.response && err.response.status === 401) {
@@ -24,7 +29,7 @@ function Account() {
             }
         };
 
-        fetchAccountInfo();
+        fetchData();
     }, [navigate]);
 
     const handleUpdate = async () => {
@@ -34,11 +39,15 @@ function Account() {
             credit_card_info: accountInfo.credit_card_info,
         };
         try {
-            const response = await axiosInstance.put("account/", updateData);
+            await axiosInstance.put("account/", updateData);
             alert("Account updated successfully.");
         } catch (err) {
             alert("Failed to update account. Please try again.");
         }
+    };
+
+    const formatPrice = (price) => {
+        return parseFloat(price).toFixed(2);
     };
 
     if (loading) {
@@ -92,6 +101,43 @@ function Account() {
                 </div>
                 <button type="submit" className="btn btn-primary">Update Account</button>
             </form>
+
+            <h2 className="mt-5 mb-4">Order History</h2>
+            {orderHistory.length > 0 ? (
+                <div className="table-responsive">
+                    <table className="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Date</th>
+                                <th>Total</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {orderHistory.map((order) => (
+                                <tr key={order.id}>
+                                    <td>{order.id}</td>
+                                    <td>{new Date(order.created_at).toLocaleDateString()}</td>
+                                    <td>${formatPrice(order.total_price)}</td>
+                                    <td>{order.status}</td>
+                                    <td>
+                                        <button
+                                            className="btn btn-sm btn-info" 
+                                            onClick={() => navigate(`/orders?id=${order.id}`)}
+                                        >
+                                            View Details
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            ) : (
+                <p>No order history available.</p>
+            )}
         </div>
     );
 }

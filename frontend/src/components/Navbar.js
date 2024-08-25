@@ -30,7 +30,7 @@ function Navbar({ isLoggedIn, setIsLoggedIn }) {
             setTimeout(() => {
                 setShowLogoutMessage(false);
                 // Navigate to home page after hiding the message
-                navigate('/');
+                // navigate('/');
             }, 10000);
         } catch (error) {
             console.error('Logout error:', error);

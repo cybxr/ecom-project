@@ -1,52 +1,179 @@
 import React, { useState, useEffect } from "react";
-import axiosInstance from "../axiosInstance";
 import { useNavigate } from "react-router-dom";
+import axiosInstance from "../axiosInstance";
 
 function Checkout() {
     const [shippingAddress, setShippingAddress] = useState("");
     const [billingAddress, setBillingAddress] = useState("");
-    const [userDetails, setUserDetails] = useState({ username: "", password: "", email: "" });
+    const [creditCardInfo, setCreditCardInfo] = useState({
+        cardNumber: "",
+        expiryDate: "",
+        cvv: ""
+    });
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [cartItems, setCartItems] = useState([]);
+    const [total, setTotal] = useState(0);
+    const [error, setError] = useState("");
     const navigate = useNavigate();
 
     useEffect(() => {
         const token = localStorage.getItem("access_token");
         if (token) {
-            axiosInstance.get("account/").then((res) => {
-                setShippingAddress(res.data.shipping_address);
-                setBillingAddress(res.data.billing_address);
-                setIsLoggedIn(true);
-            });
+            setIsLoggedIn(true);
+            fetchUserDetails();
         }
+        fetchCart();
     }, []);
 
-    const handleCheckout = () => {
-        axiosInstance
-            .post("register_or_login_and_checkout/", { ...userDetails, shipping_address: shippingAddress, billing_address: billingAddress })
+    const fetchUserDetails = () => {
+        axiosInstance.get("account/")
             .then((res) => {
-                navigate("/order-summary", { state: { order: res.data } });
+                setShippingAddress(res.data.shipping_address || "");
+                setBillingAddress(res.data.billing_address || "");
+                setCreditCardInfo({
+                    cardNumber: res.data.credit_card_info?.cardNumber || "",
+                    expiryDate: res.data.credit_card_info?.expiryDate || "",
+                    cvv: res.data.credit_card_info?.cvv || ""
+                });
             })
             .catch((err) => {
-                if (err.response.status === 402) {
-                    alert("Credit Card Authorization Failed.");
+                console.error("Error fetching user details:", err);
+                setError("Failed to load user details. Please try again.");
+            });
+    };
+
+    const handleBackToShopping = () => {
+        navigate("/"); // Assuming "/" is your main product listing page
+    };
+
+    const fetchCart = () => {
+        axiosInstance.get("cart/")
+            .then((res) => {
+                setCartItems(res.data);
+                const sum = res.data.reduce((acc, item) => acc + item.quantity * item.product.price, 0);
+                setTotal(sum.toFixed(2));
+            })
+            .catch((err) => {
+                console.error("Error fetching cart:", err);
+                setError("Failed to load cart. Please try again.");
+            });
+    };
+
+    const handleCheckout = () => {
+        const orderData = {
+            shipping_address: shippingAddress,
+            billing_address: billingAddress,
+            credit_card_info: creditCardInfo
+        };
+
+        axiosInstance.post("checkout/", orderData)
+            .then((res) => {
+                const orderSummary = {
+                    ...res.data,
+                    cart_items: cartItems,
+                    total_price: total,
+                    credit_card_info: {
+                        ...res.data.credit_card_info,
+                        cardNumber: creditCardInfo.cardNumber // Include the card number
+                    }
+                };
+                navigate("/order-summary", { state: { order: orderSummary } });
+            })
+            .catch((err) => {
+                console.error("Checkout error:", err);
+                if (err.response && err.response.status === 402) {
+                    setError("Credit Card Authorization Failed.");
+                } else {
+                    setError("An error occurred during checkout. Please try again.");
                 }
             });
     };
 
     return (
-        <div>
-            <h1>Checkout</h1>
-            {!isLoggedIn && (
-                <div>
-                    <h2>Register or Login</h2>
-                    <input type="text" placeholder="Username" value={userDetails.username} onChange={(e) => setUserDetails({ ...userDetails, username: e.target.value })} />
-                    <input type="password" placeholder="Password" value={userDetails.password} onChange={(e) => setUserDetails({ ...userDetails, password: e.target.value })} />
-                    <input type="email" placeholder="Email" value={userDetails.email} onChange={(e) => setUserDetails({ ...userDetails, email: e.target.value })} />
+        <div className="container mt-5">
+            <h1 className="mb-4">Checkout</h1>
+            {error && <div className="alert alert-danger">{error}</div>}
+            <div className="row">
+                <div className="col-md-6">
+                    <h2>Shipping Information</h2>
+                    <div className="mb-3">
+                        <label htmlFor="shippingAddress" className="form-label">Shipping Address</label>
+                        <textarea
+                            id="shippingAddress"
+                            className="form-control"
+                            value={shippingAddress}
+                            onChange={(e) => setShippingAddress(e.target.value)}
+                            required
+                        />
+                    </div>
+                    <div className="mb-3">
+                        <label htmlFor="billingAddress" className="form-label">Billing Address</label>
+                        <textarea
+                            id="billingAddress"
+                            className="form-control"
+                            value={billingAddress}
+                            onChange={(e) => setBillingAddress(e.target.value)}
+                            required
+                        />
+                    </div>
+                    <h2>Payment Information</h2>
+                    <div className="mb-3">
+                        <label htmlFor="cardNumber" className="form-label">Card Number</label>
+                        <input
+                            type="text"
+                            id="cardNumber"
+                            className="form-control"
+                            value={creditCardInfo.cardNumber}
+                            onChange={(e) => setCreditCardInfo({...creditCardInfo, cardNumber: e.target.value})}
+                            required
+                        />
+                    </div>
+                    <div className="row">
+                        <div className="col-md-6 mb-3">
+                            <label htmlFor="expiryDate" className="form-label">Expiry Date</label>
+                            <input
+                                type="text"
+                                id="expiryDate"
+                                className="form-control"
+                                value={creditCardInfo.expiryDate}
+                                onChange={(e) => setCreditCardInfo({...creditCardInfo, expiryDate: e.target.value})}
+                                placeholder="MM/YY"
+                                required
+                            />
+                        </div>
+                        <div className="col-md-6 mb-3">
+                            <label htmlFor="cvv" className="form-label">CVV</label>
+                            <input
+                                type="text"
+                                id="cvv"
+                                className="form-control"
+                                value={creditCardInfo.cvv}
+                                onChange={(e) => setCreditCardInfo({...creditCardInfo, cvv: e.target.value})}
+                                required
+                            />
+                        </div>
+                    </div>
                 </div>
-            )}
-            <input type="text" placeholder="Shipping Address" value={shippingAddress} onChange={(e) => setShippingAddress(e.target.value)} />
-            <input type="text" placeholder="Billing Address" value={billingAddress} onChange={(e) => setBillingAddress(e.target.value)} />
-            <button onClick={handleCheckout}>Confirm Order</button>
+                <div className="col-md-6">
+                    <h2>Order Summary</h2>
+                    {cartItems.map((item) => (
+                        <div key={item.id} className="d-flex justify-content-between mb-2">
+                            <span>{item.product.name} - {item.quantity}</span>
+                            <span>${(item.quantity * item.product.price).toFixed(2)}</span>
+                        </div>
+                    ))}
+                    <hr />
+                    <div className="d-flex justify-content-between mb-4">
+                        <strong>Total:</strong>
+                        <strong>${total}</strong>
+                    </div>
+                    <div className="d-flex gap-2">
+                        <button className="btn btn-primary btn-lg flex-grow-1" onClick={handleCheckout}>Place Order</button>
+                        <button className="btn btn-secondary btn-lg" onClick={handleBackToShopping}>Back to Shopping</button>
+                    </div>
+                    
+                </div>
+            </div>
         </div>
     );
 }
