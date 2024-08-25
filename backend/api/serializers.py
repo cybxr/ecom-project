@@ -15,19 +15,6 @@ class CustomerSerializer(serializers.ModelSerializer):
         model = Customer
         fields = ['user', 'billing_address', 'shipping_address', 'credit_card_info']
 
-class OrderItemSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = OrderItem
-        fields = '__all__'
-
-class OrderSerializer(serializers.ModelSerializer):
-    items = OrderItemSerializer(many=True, read_only=True)
-    customer = CustomerSerializer(read_only=True)
-
-    class Meta:
-        model = Order
-        fields = '__all__'
-
 class ReviewSerializer(serializers.ModelSerializer):
     customer = CustomerSerializer(read_only=True)
 
@@ -55,4 +42,18 @@ class CartItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CartItem
+        fields = '__all__'
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    product = ProductSerializer(read_only=True)
+    class Meta:
+        model = OrderItem
+        fields = '__all__'
+
+class OrderSerializer(serializers.ModelSerializer):
+    items = OrderItemSerializer(many=True, read_only=True)
+    customer = CustomerSerializer(read_only=True)
+
+    class Meta:
+        model = Order
         fields = '__all__'
