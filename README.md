@@ -1,5 +1,13 @@
 # ecom-project
 
+## Deployed version admin login
+
+Admin login info: \
+Username: admin \
+Password: admin-admin123
+
+## Local Setup
+
 This project consists of a Django backend and a React frontend. Follow the instructions below to set up and run both parts of the application locally.
 
 ## Backend Setup
